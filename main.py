@@ -1,4 +1,3 @@
-
 import tkinter
 import customtkinter as ctk
 from openpyxl import Workbook, load_workbook
@@ -47,7 +46,13 @@ def save_all_patients(patients, filename=FILENAME):
         ws.append([p["ID"], p["Név"], p["Szul. dátum"], p["Telefon"], p["Email"]])
     wb.save(filename)
 
-def export_patient_to_pdf(patient, filename):
+from tkinter.filedialog import asksaveasfilename
+
+def export_patient_to_pdf(patient):
+    default_filename = f"{patient['Név'].replace(' ', '_')}_export.pdf"
+    filename = asksaveasfilename(defaultextension=".pdf", filetypes=[("PDF fájlok", "*.pdf")], initialfile=default_filename)
+    if not filename:
+        return
     c = canvas.Canvas(filename, pagesize=A4)
     width, height = A4
     y = height - 50
@@ -106,36 +111,14 @@ class App(ctk.CTk):
         query = self.search_var.get().lower()
         self.patients = [p for p in load_patients() if query in p["Név"].lower() or query in p["Email"].lower()]
 
-        header = ctk.CTkFrame(self.patients_frame)
-        header.pack(fill="x", padx=10, pady=3)
-        label = ctk.CTkLabel(header, text="Név", anchor="w", width=150)
-        label.pack(side="left", padx=(5, 10), fill="x", expand=True)
-
-        label = ctk.CTkLabel(header, text="E-mail", anchor="w", width=150)
-        label.pack(side="left", padx=(5, 10), fill="x", expand=True)
-
-        label = ctk.CTkLabel(header, text="Telefonszám", anchor="w", width=150)
-        label.pack(side="left", padx=(5, 10), fill="x", expand=True)
-
-        label = ctk.CTkLabel(header, anchor="w", width=175)
-
         for patient in self.patients:
             row = ctk.CTkFrame(self.patients_frame)
             row.pack(fill="x", padx=10, pady=3)
 
-            combined_text_name = f"{patient['Név']}"
-            label = ctk.CTkLabel(row, text=combined_text_name, anchor="w", width=150)
-            label.pack(side="left", padx=(5, 10), fill="x", expand=True)
+            label = ctk.CTkLabel(row, text=f"{patient['Név']}  <{patient['Email']}>", anchor="w")
+            label.pack(side="left", padx=10, fill="x", expand=True)
 
-            combined_text_email = f"<{patient['Email']}>"
-            label = ctk.CTkLabel(row, text=combined_text_email, anchor="w", width=150)
-            label.pack(side="left", padx=(5, 10), fill="x", expand=True)
-
-            combined_text_phone = f"(+{patient['Telefon']})"
-            label = ctk.CTkLabel(row, text=combined_text_phone, anchor="w", width=150)
-            label.pack(side="left", padx=(5, 10), fill="x", expand=True)
-
-            ctk.CTkButton(row, text="PDF", width=60, command=lambda p=patient: export_patient_to_pdf(p, f"{p['Név']}_export.pdf")).pack(side="right", padx=5)
+            ctk.CTkButton(row, text="PDF", width=60, command=lambda p=patient: export_patient_to_pdf(p)).pack(side="right", padx=5)
             ctk.CTkButton(row, text="Megnyitás", width=100, command=lambda p=patient: self.open_patient_detail(p)).pack(side="right", padx=5)
 
     def open_patient_detail(self, patient):
@@ -219,4 +202,3 @@ if __name__ == "__main__":
     ctk.set_appearance_mode("system")
     app = App()
     app.mainloop()
-
