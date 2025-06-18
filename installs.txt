@@ -1,0 +1,27 @@
+pip install openpyxl pandas xlsxwriter pyexcel tkinter customtkinter
+
+
+
+header = ctk.CTkFrame(self.patients_frame)
+header.pack(fill="x", padx=10, pady=1)
+label = ctk.CTkLabel(header, text="Név", anchor="w", width=150)
+label.pack(side="left", padx=(5, 10), fill="x", expand=True)
+label = ctk.CTkLabel(header, text="E-mail", anchor="w", width=150)
+label.pack(side="left", padx=(5, 10), fill="x", expand=True)
+label = ctk.CTkLabel(header, text="Telefonszám", anchor="w", width=250)
+label.pack(side="left", padx=(5, 10), fill="x", expand=True)
+
+
+
+# Egy oszlopban a név és e-mail
+combined_text_name = f"{patient['Név']}"
+label = ctk.CTkLabel(row, text=combined_text_name, anchor="w", width=250)
+label.pack(side="left", padx=(5, 10), fill="x", expand=True)
+
+combined_text_email = f"<{patient['E-mail']}>"
+label = ctk.CTkLabel(row, text=combined_text_email, anchor="w", width=250)
+label.pack(side="left", padx=(5, 10), fill="x", expand=True)
+
+combined_text_phone = f"(+{patient['Telefonszám']})"
+label = ctk.CTkLabel(row, text=combined_text_phone, anchor="w", width=250)
+label.pack(side="left", padx=(5, 10), fill="x", expand=True)
