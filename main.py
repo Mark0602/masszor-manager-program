@@ -111,12 +111,32 @@ class App(ctk.CTk):
         query = self.search_var.get().lower()
         self.patients = [p for p in load_patients() if query in p["Név"].lower() or query in p["Email"].lower()]
 
+        header = ctk.CTkFrame(self.patients_frame)
+        header.pack(fill="x", padx=10, pady=3)
+        label = ctk.CTkLabel(header, text="Név", anchor="w", width=250)
+        label.pack(side="left", padx=(5, 10), fill="x", expand=False)
+        label = ctk.CTkLabel(header, text="E-mail", anchor="w", width=250)
+        label.pack(side="left", padx=(5, 10), fill="x", expand=False)
+        label = ctk.CTkLabel(header, text="Telefonszám", anchor="w", width=250)
+        label.pack(side="left", padx=(5, 10), fill="x", expand=False)
+
         for patient in self.patients:
             row = ctk.CTkFrame(self.patients_frame)
             row.pack(fill="x", padx=10, pady=3)
 
-            label = ctk.CTkLabel(row, text=f"{patient['Név']}  <{patient['Email']}>", anchor="w")
-            label.pack(side="left", padx=10, fill="x", expand=True)
+            combined_text_name = f"{patient['Név']}"
+            label = ctk.CTkLabel(row, text=combined_text_name, anchor="w", width=250)
+            label.pack(side="left", padx=(5, 10), fill="x", expand=False)
+
+            combined_text_email = f"<{patient['Email']}>"
+            label = ctk.CTkLabel(row, text=combined_text_email, anchor="w", width=250)
+            label.pack(side="left", padx=(5, 10), fill="x", expand=False)
+
+            combined_text_phone = f"(+{patient['Telefon']})"
+            label = ctk.CTkLabel(row, text=combined_text_phone, anchor="w", width=250)
+            label.pack(side="left", padx=(5, 10), fill="x", expand=False)
+
+            
 
             ctk.CTkButton(row, text="PDF", width=60, command=lambda p=patient: export_patient_to_pdf(p)).pack(side="right", padx=5)
             ctk.CTkButton(row, text="Megnyitás", width=100, command=lambda p=patient: self.open_patient_detail(p)).pack(side="right", padx=5)
