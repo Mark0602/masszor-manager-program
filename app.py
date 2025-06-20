@@ -383,6 +383,7 @@ class App(ctk.CTk):
         list_frame.pack(fill="both", expand=True, pady=10, padx=10)
 
         def refresh_week_list():
+            appointments = load_appointments()  # <-- mindig friss adatot tölts be!
             for widget in list_frame.winfo_children():
                 widget.destroy()
             today = date.today()
@@ -549,7 +550,7 @@ class App(ctk.CTk):
         def open_details_window(appt):
             detail_win = ctk.CTkToplevel(win)
             detail_win.title(f"Részletek - {appt['Név']} ({appt['Dátum']} {appt['Időpont']})")
-            detail_win.geometry("400x350")
+            detail_win.geometry("400x550")
             detail_win.focus()
             detail_win.grab_set()
             detail_win.configure(fg_color="#2b2b2b")  # sötétszürke háttér
@@ -617,3 +618,48 @@ class App(ctk.CTk):
         ctk.CTkButton(select_win, text="Kiválaszt", command=on_select, fg_color="#205081", text_color="white").pack(pady=10)
 
 
+    def edit_appointment_popup(self, appt, refresh_callback=None):
+        edit_win = ctk.CTkToplevel(self)
+        edit_win.title("Időpont szerkesztése")
+        edit_win.geometry("400x250")
+        edit_win.focus()
+        edit_win.grab_set()
+        edit_win.configure(fg_color="#2b2b2b")
+    
+        ctk.CTkLabel(edit_win, text="Megjegyzés:", fg_color="transparent", text_color="white").pack(pady=10)
+        megj_var = ctk.StringVar(value=appt.get("Megjegyzés", ""))
+        ctk.CTkEntry(edit_win, textvariable=megj_var, width=300).pack(pady=10)
+    
+        def save_edit():
+            appointments = load_appointments()
+            for a in appointments:
+                if (
+                    a.get("ID") == appt.get("ID")
+                    and a.get("Dátum") == appt.get("Dátum")
+                    and a.get("Időpont") == appt.get("Időpont")
+                ):
+                    a["Megjegyzés"] = megj_var.get()
+            save_all_appointments(appointments)
+            edit_win.destroy()
+            messagebox.showinfo("Siker", "Időpont módosítva!")
+            if refresh_callback:
+                refresh_callback()
+    
+        ctk.CTkButton(edit_win, text="Mentés", command=save_edit, fg_color="#205081", text_color="white").pack(pady=20)
+    
+    def delete_appointment(self, appt, refresh_callback=None):
+        if not messagebox.askyesno("Megerősítés", "Biztosan törlöd ezt az időpontot?"):
+            return
+        appointments = load_appointments()
+        appointments = [
+            a for a in appointments
+            if not (
+                a.get("ID") == appt.get("ID")
+                and a.get("Dátum") == appt.get("Dátum")
+                and a.get("Időpont") == appt.get("Időpont")
+            )
+        ]
+        save_all_appointments(appointments)
+        messagebox.showinfo("Siker", "Időpont törölve!")
+        if refresh_callback:
+            refresh_callback()
