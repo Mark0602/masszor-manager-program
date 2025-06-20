@@ -10,6 +10,7 @@ from tkcalendar import DateEntry
 from tkinter import ttk
 from tkinter.filedialog import asksaveasfilename
 import tkinter.messagebox as messagebox
+from appointments import save_all_appointments
 
 from date_handler import load_patients, save_all_patients, save_to_excel
 from appointments import save_appointment, load_appointments
@@ -36,8 +37,8 @@ class App(ctk.CTk):
         control_frame = ctk.CTkFrame(self, fg_color="#232323")
         control_frame.pack(pady=10)
         ctk.CTkButton(control_frame, text="Új páciens", command=self.open_edit_popup, fg_color="#205081", text_color="white").pack(side="left", padx=10)
-        ctk.CTkButton(control_frame, text="Időpontok megtekintése", command=self.view_appointments, fg_color="#205081", text_color="white").pack(side="left", padx=10)
-        ctk.CTkButton(control_frame, text="E heti időpontok", command=self.view_week_appointments, fg_color="#205081", text_color="white").pack(side="left", padx=10)
+        #ctk.CTkButton(control_frame, text="Időpontok megtekintése", command=self.view_appointments, fg_color="#205081", text_color="white").pack(side="left", padx=10)
+        ctk.CTkButton(control_frame, text="Időpontok", command=self.view_week_appointments, fg_color="#205081", text_color="white").pack(side="left", padx=10)
 
         self.refresh_patients_list()
 
@@ -150,18 +151,9 @@ class App(ctk.CTk):
             if new_data["Szul. dátum"] == "":
                 messagebox.showerror("Hiba", "A születési dátum mező nem lehet üres!")
                 return
-<<<<<<< HEAD
             
             
             
-=======
-            if not new_data["Név"] or not new_data["Email"] or not new_data["Telefon"]:
-                return
-            if not new_data["Szul. dátum"]:
-                messagebox.showerror("Hiba", "A születési dátum mező nem lehet üres!")
-                return
-                      
->>>>>>> origin/main
             data = [new_data if p["ID"] == new_data["ID"] else p for p in load_patients()]
             if not patient:
                 data.append(new_data)
@@ -170,16 +162,10 @@ class App(ctk.CTk):
             self.refresh_patients_list()
 
         ctk.CTkButton(edit, text="Mentés", command=save).pack(pady=10)
-<<<<<<< HEAD
 
     def book_appointment_popup(self, selected_patient=None):
         from datetime import timedelta
 
-=======
-        
-    # Időpont foglalása
-    def book_appointment(self, patient):
->>>>>>> origin/main
         book = ctk.CTkToplevel(self)
         book.geometry("1500x600")
         book.title("Időpont foglalás")
@@ -312,30 +298,32 @@ class App(ctk.CTk):
         def on_book():
             # Páciens kiválasztása
             if selected_patient:
-                selected_patient = selected_patient
+                patient = selected_patient
             else:
                 selected = patient_var.get()
                 filtered = [p for p in patients if f"{p['Név']} ({p['Email']})" == selected]
                 if not filtered:
                     messagebox.showerror("Hiba", "Nincs kiválasztott páciens!")
                     return
-                selected_patient = filtered[0]
+                patient = filtered[0]
             # Időpont kiválasztása
             if not selected_slot["day"] or not selected_slot["hour"]:
                 messagebox.showerror("Hiba", "Nincs kiválasztott időpont!")
                 return
             # Mentés
             new_appt = {
-                "ID": selected_patient.get("ID"),
-                "Név": selected_patient.get("Név"),
-                "Telefon": selected_patient.get("Telefon"),
-                "Email": selected_patient.get("Email"),
-                "Szul. dátum": selected_patient.get("Szul. dátum"),
+                "ID": patient.get("ID"),
+                "Név": patient.get("Név"),
+                "Telefon": patient.get("Telefon"),
+                "Email": patient.get("Email"),
+                "Szul. dátum": patient.get("Szul. dátum"),
                 "Dátum": selected_slot["day"].strftime("%Y-%m-%d"),
                 "Időpont": selected_slot["hour"],
                 "Megjegyzés": megj_var.get()
             }
-            save_appointment(new_appt)
+            appointments = load_appointments()
+            appointments.append(new_appt)
+            save_all_appointments(appointments)
             book.destroy()
             messagebox.showinfo("Siker", "Időpont lefoglalva!")
 
@@ -478,7 +466,7 @@ class App(ctk.CTk):
                     cell_label.pack(fill="both", expand=True, padx=4, pady=8)
 
                     # Részletek gomb csak ha van időpont
-                    if a:
+                    '''if a:
                         details_btn = ctk.CTkButton(
                             cell_frame,
                             text="Részletek",
@@ -489,22 +477,52 @@ class App(ctk.CTk):
                             text_color="white",
                             command=lambda appt=a: open_details_window(appt)
                         )
-                        details_btn.place(relx=0.5, rely=0.5, anchor="center")
-                        details_btn.place_forget()
+                        details_btn.pack(side="top", pady=2)
 
-                        hover_count = {"count": 0}
+                        # Szerkesztés gomb
+                        edit_btn = ctk.CTkButton(
+                            cell_frame,
+                            text="Szerkesztés",
+                            width=80,
+                            height=28,
+                            font=("Arial", 10),
+                            fg_color="#205081",
+                            text_color="white",
+                            command=lambda appt=a: self.edit_appointment_popup(appt)
+                        )
+                        edit_btn.pack(side="top", pady=2)
 
-                        def on_enter(e, btn=details_btn):
-                            hover_count["count"] += 1
-                            btn.place(relx=0.5, rely=0.5, anchor="center")
-                        def on_leave(e, btn=details_btn):
-                            hover_count["count"] -= 1
-                            if hover_count["count"] <= 0:
-                                btn.place_forget()
+                        # Törlés gomb
+                        delete_btn = ctk.CTkButton(
+                            cell_frame,
+                            text="Törlés",
+                            width=80,
+                            height=28,
+                            font=("Arial", 10),
+                            fg_color="#a83232",
+                            text_color="white",
+                            command=lambda appt=a: self.delete_appointment(appt, refresh_week_list)
+                        )
+                        delete_btn.pack(side="top", pady=2)'''
 
-                        for widget in (cell_frame, cell_label, details_btn):
-                            widget.bind("<Enter>", on_enter)
-                            widget.bind("<Leave>", on_leave)
+                        # Hárompontos menü gomb (⋮)
+                    def show_menu(event, appt=a):
+                        menu = tkinter.Menu(cell_frame, tearoff=0)
+                        menu.add_command(label="Részletek", command=lambda: open_details_window(appt))
+                        menu.add_command(label="Szerkesztés", command=lambda: self.edit_appointment_popup(appt))
+                        menu.add_command(label="Törlés", command=lambda: self.delete_appointment(appt, refresh_week_list))
+                        menu.tk_popup(event.x_root, event.y_root)
+
+                    menu_btn = ctk.CTkButton(
+                        cell_frame,
+                        text="⋮",
+                        width=28,
+                        height=28,
+                        fg_color="#205081",
+                        text_color="white"
+                    )
+                    menu_btn.place(relx=0.9, rely=0.1, anchor="ne")
+                    menu_btn.bind("<Button-1>", show_menu)
 
         def prev_week():
             current_week_offset[0] -= 1
@@ -597,3 +615,45 @@ class App(ctk.CTk):
             self.book_appointment(patient)
 
         ctk.CTkButton(select_win, text="Kiválaszt", command=on_select, fg_color="#205081", text_color="white").pack(pady=10)
+
+    def edit_appointment_popup(self, appt):
+        edit_win = ctk.CTkToplevel(self)
+        edit_win.title("Időpont szerkesztése")
+        edit_win.geometry("400x350")
+        edit_win.focus()
+        edit_win.grab_set()
+        edit_win.configure(fg_color="#2b2b2b")
+
+        ctk.CTkLabel(edit_win, text="Megjegyzés:", fg_color="transparent", text_color="white").pack(pady=10)
+        megj_var = ctk.StringVar(value=appt.get("Megjegyzés", ""))
+        ctk.CTkEntry(edit_win, textvariable=megj_var, width=300).pack(pady=10)
+
+        def save_edit():
+            appt["Megjegyzés"] = megj_var.get()
+            # Frissítsd az időpontot a tárolóban
+            appointments = load_appointments()
+            for a in appointments:
+                if a.get("ID") == appt.get("ID") and a.get("Dátum") == appt.get("Dátum") and a.get("Időpont") == appt.get("Időpont"):
+                    a["Megjegyzés"] = appt["Megjegyzés"]
+            from appointments import save_all_appointments
+            save_all_appointments(appointments)  # Írd felül az összeset
+            edit_win.destroy()
+            messagebox.showinfo("Siker", "Időpont módosítva!")
+            self.view_week_appointments()  # Frissítés
+
+        ctk.CTkButton(edit_win, text="Mentés", command=save_edit, fg_color="#205081", text_color="white").pack(pady=20)
+
+    def delete_appointment(self, appt, refresh_callback=None):
+        if not messagebox.askyesno("Megerősítés", "Biztosan törlöd ezt az időpontot?"):
+            return
+        appointments = load_appointments()
+        appointments = [a for a in appointments if not (
+            a.get("ID") == appt.get("ID") and
+            a.get("Dátum") == appt.get("Dátum") and
+            a.get("Időpont") == appt.get("Időpont")
+        )]
+        
+        save_all_appointments(appointments)
+        messagebox.showinfo("Siker", "Időpont törölve!")
+        if refresh_callback:
+            refresh_callback()

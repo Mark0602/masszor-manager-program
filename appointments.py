@@ -42,3 +42,25 @@ def load_appointments():
                     "Megjegyzés": row[4]
                 })
     return appointments
+
+def save_all_appointments(appointments):
+    wb = Workbook()
+    ws = wb.active
+    # Fejléc
+    headers = ["ID", "Név", "Telefon", "Email", "Szul. dátum", "Dátum", "Időpont", "Megjegyzés"]
+    ws.append(headers)
+    # Adatok
+    for a in appointments:
+        ws.append([
+            a.get("ID", ""),
+            a.get("Név", ""),
+            a.get("Telefon", ""),
+            a.get("Email", ""),
+            a.get("Szul. dátum", ""),
+            a.get("Dátum", ""),
+            a.get("Időpont", ""),
+            a.get("Megjegyzés", "")
+        ])
+    # Fájl mentése
+    os.makedirs(os.path.dirname(APPOINTMENT_FILE), exist_ok=True)
+    wb.save(APPOINTMENT_FILE)
