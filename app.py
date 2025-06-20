@@ -76,7 +76,7 @@ class App(ctk.CTk):
 
         ctk.CTkButton(popup, text="Szerkesztés", command=lambda: [popup.destroy(), self.open_edit_popup(patient)], fg_color="#205081", text_color="white").pack(pady=5)
         ctk.CTkButton(popup, text="Törlés", fg_color="red", command=lambda: [popup.destroy(), self.delete_patient(patient)]).pack(pady=5)
-        ctk.CTkButton(popup, text="Időpont foglalás", command=lambda: [popup.destroy(), self.book_appointment(patient)], fg_color="#205081", text_color="white").pack(pady=5)
+        ctk.CTkButton(popup, text="Időpont foglalás", command=lambda: [popup.destroy(), self.book_appointment_popup()], fg_color="#205081", text_color="white").pack(pady=5)
 
     def delete_patient(self, patient):
         self.patients = [p for p in load_patients() if p["ID"] != patient["ID"]]
@@ -156,43 +156,175 @@ class App(ctk.CTk):
 
         ctk.CTkButton(edit, text="Mentés", command=save).pack(pady=10)
 
-    def book_appointment(self, patient):
+    def book_appointment_popup(self, selected_patient=None):
+        from datetime import timedelta
+
         book = ctk.CTkToplevel(self)
-        book.geometry("600x400")
+        book.geometry("1500x600")
         book.title("Időpont foglalás")
         book.focus()
         book.grab_set()
         book.resizable(False, False)
-        book.configure(fg_color="#2b2b2b")  # szürkés háttér
+        book.configure(fg_color="#2b2b2b")
 
-        ctk.CTkLabel(book, text="Dátum", fg_color="transparent", text_color="white").pack()
-        native_frame = tkinter.Frame(book)
-        native_frame.pack()
-        date_entry = DateEntry(native_frame, date_pattern='yyyy-mm-dd', mindate=date.today(), width=25)
-        date_entry.pack()
+        # --- BAL: Naptár ---
+        calendar_frame = ctk.CTkFrame(book, fg_color="#2b2b2b")
+        calendar_frame.pack(side="left", fill="both", expand=True, padx=(20,10), pady=20)
 
-        ctk.CTkLabel(book, text="Időpont", fg_color="transparent", text_color="white").pack()
-        time_var = ctk.StringVar()
-        time_combo = ttk.Combobox(book, textvariable=time_var, width=25)
-        time_combo['values'] = [f"{h:02d}:00" for h in range(8, 20)]
-        time_combo.current(0)
-        time_combo.pack(pady=5)
+        today = date.today()
+        start_week = today - timedelta(days=today.weekday())
+        days = [(start_week + timedelta(days=i)) for i in range(7)]
+        magyar_napok = ["Hétfő", "Kedd", "Szerda", "Csütörtök", "Péntek", "Szombat", "Vasárnap"]
+        hours = [f"{h:02d}:00" for h in range(8, 20)]
 
-        ctk.CTkLabel(book, text="Megjegyzés", fg_color="transparent", text_color="white").pack()
-        note_box = ctk.CTkTextbox(book, width=250, height=100)
-        note_box.pack(pady=5)
+        ctk.CTkLabel(calendar_frame, text="Válassz időpontot:", fg_color="transparent", text_color="white", font=("Arial", 16, "bold")).pack(pady=10)
 
-        def save_appt():
-            save_appointment(patient["ID"], patient["Név"], date_entry.get(), time_var.get(), note_box.get("1.0", "end-1c"))
+        scroll_frame = ctk.CTkScrollableFrame(calendar_frame, fg_color="#2b2b2b", width=750, height=500)
+        scroll_frame.pack(fill="both", expand=True)
+
+        grid_frame = ctk.CTkFrame(scroll_frame, fg_color="#2b2b2b")
+        grid_frame.pack(fill="both", expand=True)
+
+        # Fejléc
+        ctk.CTkLabel(grid_frame, text="", width=80, height=40, fg_color="transparent").grid(row=0, column=0, padx=2, pady=2)
+        for col, d in enumerate(days):
+            fejlec = f"{magyar_napok[col]}\n{d.strftime('%Y-%m-%d')}"
+            ctk.CTkLabel(
+                grid_frame,
+                text=fejlec,
+                font=("Arial", 12, "bold"),
+                anchor="center",
+                width=120,
+                height=40,
+                fg_color="#205081",
+                corner_radius=8,
+                text_color="white"
+            ).grid(row=0, column=col+1, padx=2, pady=2, sticky="nsew")
+
+        # Lefoglalt időpontok kigyűjtése
+        appointments = load_appointments()
+        booked = {(a["Dátum"], a["Időpont"]) for a in appointments}
+
+        # Választott időpont változó
+        selected_slot = {"day": None, "hour": None}
+
+        def select_slot(day, hour):
+            selected_slot["day"] = day
+            selected_slot["hour"] = hour
+            # Frissítsd a gombok színét, hogy látszódjon a kiválasztás
+            for btn in slot_buttons.values():
+                btn.configure(border_width=0)
+            slot_buttons[(day.strftime("%Y-%m-%d"), hour)].configure(border_width=3, border_color="#FFD700")
+
+        slot_buttons = {}
+        for row, hour in enumerate(hours):
+            ctk.CTkLabel(
+                grid_frame,
+                text=hour,
+                font=("Arial", 11, "bold"),
+                width=80,
+                height=60,
+                fg_color="#205081",
+                text_color="white",
+                anchor="center"
+            ).grid(row=row+1, column=0, padx=2, pady=2, sticky="nsew")
+            for col, day in enumerate(days):
+                datum = day.strftime("%Y-%m-%d")
+                is_booked = (datum, hour) in booked
+                btn = ctk.CTkButton(
+                    grid_frame,
+                    text="Foglalt" if is_booked else "Szabad",
+                    fg_color="#444444" if is_booked else "#22406a",
+                    text_color="white",
+                    state="disabled" if is_booked else "normal",
+                    width=120,
+                    height=60,
+                    command=(lambda d=day, h=hour: select_slot(d, h)) if not is_booked else None
+                )
+                btn.grid(row=row+1, column=col+1, padx=2, pady=2, sticky="nsew")
+                slot_buttons[(datum, hour)] = btn
+
+        # --- JOBB: Páciens és megjegyzés ---
+        side_frame = ctk.CTkFrame(book, fg_color="#232323", width=350)
+        side_frame.pack(side="right", fill="y", padx=(10,20), pady=20)
+        side_frame.pack_propagate(False)
+
+        ctk.CTkLabel(side_frame, text="Páciens kiválasztása", fg_color="transparent", text_color="white", font=("Arial", 14, "bold")).pack(pady=(20,5))
+
+        patients = load_patients()
+        patient_names = [f"{p['Név']} ({p['Email']})" for p in patients]
+        patient_var = ctk.StringVar(value=patient_names[0] if patient_names else "")
+
+        # Keresőmező
+        search_var = ctk.StringVar()
+        search_entry = ctk.CTkEntry(side_frame, textvariable=search_var, placeholder_text="Keresés név vagy email szerint...")
+        search_entry.pack(pady=5, padx=10, fill="x")
+
+        # Páciens ComboBox
+        patient_combo = ctk.CTkComboBox(side_frame, values=patient_names, variable=patient_var, width=300)
+        patient_combo.pack(pady=10)
+
+        def update_combo(*_):
+            query = search_var.get().lower()
+            filtered = [f"{p['Név']} ({p['Email']})" for p in patients if query in p['Név'].lower() or query in p['Email'].lower()]
+            patient_combo.configure(values=filtered)
+            if filtered:
+                patient_var.set(filtered[0])
+            else:
+                patient_var.set("")
+
+        search_var.trace_add("write", update_combo)
+
+        # Ha van kiválasztott páciens, tiltsd le a keresőt és comboboxot
+        if selected_patient:
+            selected_name = f"{selected_patient['Név']} ({selected_patient['Email']})"
+            patient_var.set(selected_name)
+            patient_combo.configure(state="disabled")
+            search_entry.configure(state="disabled")
+
+        # Megjegyzés
+        ctk.CTkLabel(side_frame, text="Megjegyzés (opcionális):", fg_color="transparent", text_color="white").pack(pady=(20,5))
+        megj_var = ctk.StringVar()
+        ctk.CTkEntry(side_frame, textvariable=megj_var, width=300).pack(pady=5)
+
+        # Foglalás gomb
+        def on_book():
+            # Páciens kiválasztása
+            if selected_patient:
+                selected_patient = selected_patient
+            else:
+                selected = patient_var.get()
+                filtered = [p for p in patients if f"{p['Név']} ({p['Email']})" == selected]
+                if not filtered:
+                    messagebox.showerror("Hiba", "Nincs kiválasztott páciens!")
+                    return
+                selected_patient = filtered[0]
+            # Időpont kiválasztása
+            if not selected_slot["day"] or not selected_slot["hour"]:
+                messagebox.showerror("Hiba", "Nincs kiválasztott időpont!")
+                return
+            # Mentés
+            new_appt = {
+                "ID": selected_patient.get("ID"),
+                "Név": selected_patient.get("Név"),
+                "Telefon": selected_patient.get("Telefon"),
+                "Email": selected_patient.get("Email"),
+                "Szul. dátum": selected_patient.get("Szul. dátum"),
+                "Dátum": selected_slot["day"].strftime("%Y-%m-%d"),
+                "Időpont": selected_slot["hour"],
+                "Megjegyzés": megj_var.get()
+            }
+            save_appointment(new_appt)
             book.destroy()
+            messagebox.showinfo("Siker", "Időpont lefoglalva!")
 
-        ctk.CTkButton(book, text="Foglalás mentése", command=save_appt).pack(pady=10)
+        ctk.CTkButton(side_frame, text="Időpont lefoglalása", command=on_book, fg_color="#205081", text_color="white", width=200, height=40).pack(pady=30)
 
     def view_appointments(self):
         appointments = load_appointments()
 
         win = ctk.CTkToplevel(self)
-        win.title("Időpontok megtekintése")
+        win.title("Mai időpontok")
         win.geometry("600x500")
         win.focus()
         win.grab_set()
@@ -228,7 +360,7 @@ class App(ctk.CTk):
         current_week_offset = [0]  # Listában, hogy closure-ból módosítható legyen
 
         win = ctk.CTkToplevel(self)
-        win.title("E heti időpontok")
+        win.title("Időpontok megtekintése - Hét")
         win.geometry("1100x500")
         win.focus()
         win.grab_set()
@@ -364,6 +496,13 @@ class App(ctk.CTk):
         ctk.CTkButton(nav_frame, text="<< Előző hét", command=prev_week, fg_color="#205081", text_color="white").pack(side="left", padx=10)
         ctk.CTkButton(nav_frame, text="Következő hét >>", command=next_week, fg_color="#205081", text_color="white").pack(side="left", padx=10)
         ctk.CTkButton(nav_frame, text="Frissítés", command=refresh_week_list, fg_color="#205081", text_color="white").pack(side="left", padx=10)
+        ctk.CTkButton(
+            nav_frame,
+            text="Új időpont foglalása",
+            fg_color="#22406a",
+            text_color="white",
+            command=lambda: self.book_appointment_popup()
+        ).pack(side="left", padx=10)
 
         refresh_week_list()
 
@@ -392,3 +531,48 @@ class App(ctk.CTk):
             details_box = ctk.CTkTextbox(detail_win, width=300, height=100)
             details_box.pack(pady=5)
             ctk.CTkButton(detail_win, text="Mentés", command=detail_win.destroy, fg_color="#205081", text_color="white").pack(pady=10)
+
+    def select_patient_and_book(self):
+        select_win = ctk.CTkToplevel(self)
+        select_win.title("Páciens kiválasztása")
+        select_win.geometry("400x400")
+        select_win.focus()
+        select_win.grab_set()
+        select_win.configure(fg_color="#2b2b2b")
+
+        ctk.CTkLabel(select_win, text="Válassz pácienst:", fg_color="transparent", text_color="white").pack(pady=10)
+
+        patients = load_patients()
+        patient_names = [f"{p['Név']} ({p['Email']})" for p in patients]
+        patient_var = ctk.StringVar(value=patient_names[0] if patient_names else "")
+
+        # Keresőmező
+        search_var = ctk.StringVar()
+        search_entry = ctk.CTkEntry(select_win, textvariable=search_var, placeholder_text="Keresés név vagy email szerint...")
+        search_entry.pack(pady=5, padx=10, fill="x")
+
+        # ComboBox
+        patient_combo = ctk.CTkComboBox(select_win, values=patient_names, variable=patient_var, width=300)
+        patient_combo.pack(pady=10)
+
+        def update_combo(*_):
+            query = search_var.get().lower()
+            filtered = [f"{p['Név']} ({p['Email']})" for p in patients if query in p['Név'].lower() or query in p['Email'].lower()]
+            patient_combo.configure(values=filtered)
+            if filtered:
+                patient_var.set(filtered[0])
+            else:
+                patient_var.set("")
+
+        search_var.trace_add("write", update_combo)
+
+        def on_select():
+            selected = patient_var.get()
+            filtered = [p for p in patients if f"{p['Név']} ({p['Email']})" == selected]
+            if not filtered:
+                return
+            patient = filtered[0]
+            select_win.destroy()
+            self.book_appointment(patient)
+
+        ctk.CTkButton(select_win, text="Kiválaszt", command=on_select, fg_color="#205081", text_color="white").pack(pady=10)
