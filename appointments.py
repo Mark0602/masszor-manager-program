@@ -44,23 +44,16 @@ def load_appointments():
     return appointments
 
 def save_all_appointments(appointments):
+    from openpyxl import Workbook
+    import os
+
+    APPOINTMENT_FILE = "data/idopontok.xlsx"
+    headers = ["Páciens ID", "Név", "Dátum", "Időpont", "Megjegyzés"]
     wb = Workbook()
     ws = wb.active
-    # Fejléc
-    headers = ["ID", "Név", "Telefon", "Email", "Szul. dátum", "Dátum", "Időpont", "Megjegyzés"]
     ws.append(headers)
-    # Adatok
     for a in appointments:
-        ws.append([
-            a.get("ID", ""),
-            a.get("Név", ""),
-            a.get("Telefon", ""),
-            a.get("Email", ""),
-            a.get("Szul. dátum", ""),
-            a.get("Dátum", ""),
-            a.get("Időpont", ""),
-            a.get("Megjegyzés", "")
-        ])
-    # Fájl mentése
+        row = [a.get("Páciens ID", ""), a.get("Név", ""), a.get("Dátum", ""), a.get("Időpont", ""), a.get("Megjegyzés", "")]
+        ws.append(row)
     os.makedirs(os.path.dirname(APPOINTMENT_FILE), exist_ok=True)
     wb.save(APPOINTMENT_FILE)

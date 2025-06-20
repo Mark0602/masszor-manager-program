@@ -16,16 +16,18 @@ APPOINTMENT_FILE = "data/idopontok.xlsx"
 
 # --- Excel kezelő függvények ---
 def save_to_excel(patient, filename=FILENAME):
+    headers = ["ID", "Név", "Szul. dátum", "Telefon", "Email"]
     if os.path.exists(filename):
         wb = load_workbook(filename)
         ws = wb.active
     else:
         wb = Workbook()
         ws = wb.active
-        ws.append(["ID", "Név", "Szul. dátum", "Telefon", "Email"])
+        ws.append(headers)
 
-
-    ws.append([patient["ID"], patient["Név"], patient["Szul. dátum"], patient["Telefon"], patient["Email"]])
+    # Mindig a helyes sorrendben, hiányzó mezőket üres stringgel pótolva
+    row = [patient.get(h, "") for h in headers]
+    ws.append(row)
     wb.save(filename)
 
 def load_patients(filename=FILENAME):
@@ -45,9 +47,11 @@ def load_patients(filename=FILENAME):
     return patients
 
 def save_all_patients(patients, filename=FILENAME):
+    headers = ["ID", "Név", "Szul. dátum", "Telefon", "Email"]
     wb = Workbook()
     ws = wb.active
-    ws.append(["ID", "Név", "Szul. dátum", "Telefon", "Email"])
+    ws.append(headers)
     for p in patients:
-        ws.append([p["ID"], p["Név"], p["Szul. dátum"], p["Telefon"], p["Email"]])
+        row = [p.get(h, "") for h in headers]
+        ws.append(row)
     wb.save(filename)
