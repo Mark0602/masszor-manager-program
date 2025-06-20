@@ -16,6 +16,8 @@ from appointments import save_appointment, load_appointments
 from pdf_export import export_patient_to_pdf
 
 class App(ctk.CTk):
+
+    # Főmenü
     def __init__(self):
         super().__init__()
         self.title("Masszőr Program")
@@ -61,6 +63,8 @@ class App(ctk.CTk):
             ctk.CTkButton(row, text="PDF", width=60, command=lambda p=patient: export_patient_to_pdf(p)).pack(side="right", padx=5)
             ctk.CTkButton(row, text="Megnyitás", width=100, command=lambda p=patient: self.open_patient_detail(p)).pack(side="right", padx=5)
 
+
+    #Az adott pácien adatlapjának megnyitása
     def open_patient_detail(self, patient):
         popup = ctk.CTkToplevel(self)
         popup.title(f"{patient['Név']} - Adatlap")
@@ -76,11 +80,13 @@ class App(ctk.CTk):
         ctk.CTkButton(popup, text="Törlés", fg_color="red", command=lambda: [popup.destroy(), self.delete_patient(patient)]).pack(pady=5)
         ctk.CTkButton(popup, text="Időpont foglalás", command=lambda: [popup.destroy(), self.book_appointment(patient)]).pack(pady=5)
 
+    # Páciensek törlése
     def delete_patient(self, patient):
         self.patients = [p for p in load_patients() if p["ID"] != patient["ID"]]
         save_all_patients(self.patients)
         self.refresh_patients_list()
 
+    #Az adott páciens szerkesztése vagy új páciens hozzáadása
     def open_edit_popup(self, patient=None):
         edit = ctk.CTkToplevel(self)
         edit.geometry("400x400")
@@ -143,13 +149,7 @@ class App(ctk.CTk):
             if not new_data["Szul. dátum"]:
                 messagebox.showerror("Hiba", "A születési dátum mező nem lehet üres!")
                 return
-            
-          
-            
-            
-            
-            
-            
+                      
             data = [new_data if p["ID"] == new_data["ID"] else p for p in load_patients()]
             if not patient:
                 data.append(new_data)
@@ -158,7 +158,8 @@ class App(ctk.CTk):
             self.refresh_patients_list()
 
         ctk.CTkButton(edit, text="Mentés", command=save).pack(pady=10)
-
+        
+    # Időpont foglalása
     def book_appointment(self, patient):
         book = ctk.CTkToplevel(self)
         book.geometry("600x400")
