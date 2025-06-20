@@ -163,7 +163,7 @@ class App(ctk.CTk):
 
         ctk.CTkButton(edit, text="Mentés", command=save).pack(pady=10)
 
-    def book_appointment_popup(self, selected_patient=None):
+    def book_appointment_popup(self, selected_patient=None, refresh_callback=None):
         from datetime import timedelta
 
         book = ctk.CTkToplevel(self)
@@ -326,6 +326,8 @@ class App(ctk.CTk):
             save_all_appointments(appointments)
             book.destroy()
             messagebox.showinfo("Siker", "Időpont lefoglalva!")
+            if refresh_callback:
+                refresh_callback()
 
         ctk.CTkButton(side_frame, text="Időpont lefoglalása", command=on_book, fg_color="#205081", text_color="white", width=200, height=40).pack(pady=30)
 
@@ -541,7 +543,7 @@ class App(ctk.CTk):
             text="Új időpont foglalása",
             fg_color="#22406a",
             text_color="white",
-            command=lambda: self.book_appointment_popup()
+            command=lambda: self.book_appointment_popup(refresh_callback=refresh_week_list)
         ).pack(side="left", padx=10)
 
         refresh_week_list()
@@ -571,6 +573,8 @@ class App(ctk.CTk):
             details_box = ctk.CTkTextbox(detail_win, width=300, height=100)
             details_box.pack(pady=5)
             ctk.CTkButton(detail_win, text="Mentés", command=detail_win.destroy, fg_color="#205081", text_color="white").pack(pady=10)
+
+            win.focus_set()  # Visszaállítja a fókuszt az eredeti ablakra
 
     def select_patient_and_book(self):
         select_win = ctk.CTkToplevel(self)
@@ -613,10 +617,11 @@ class App(ctk.CTk):
                 return
             patient = filtered[0]
             select_win.destroy()
+
             self.book_appointment(patient)
 
         ctk.CTkButton(select_win, text="Kiválaszt", command=on_select, fg_color="#205081", text_color="white").pack(pady=10)
-
+        
 
     def edit_appointment_popup(self, appt, refresh_callback=None):
         edit_win = ctk.CTkToplevel(self)
@@ -663,3 +668,6 @@ class App(ctk.CTk):
         messagebox.showinfo("Siker", "Időpont törölve!")
         if refresh_callback:
             refresh_callback()
+
+        if hasattr(self, "refresh_week_list_callback") and self.refresh_week_list_callback:
+            self.refresh_week_list_callback()
